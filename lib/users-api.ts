@@ -1,7 +1,7 @@
 // API service for fetching users from database
 
-// const BASE_URL = 'https://server.totus.club';
 const BASE_URL = 'https://server.totus.club';
+// const BASE_URL = 'https://server.totus.club';
 
 export interface User {
   id: number;
@@ -14,6 +14,24 @@ export interface User {
   online: boolean;
   hasVoipToken: boolean;
   hasSocket: boolean;
+  access?: boolean | 0 | 1; // 0 = Доступ (has access), 1 = Заблок. (blocked)
+}
+
+// Update user access (1 or 0)
+export async function updateUserAccess(userId: number, access: boolean): Promise<void> {
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/${userId}/access`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access }),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to update access: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Error updating user access:', error);
+    throw error;
+  }
 }
 
 // Get all users from database

@@ -11,7 +11,7 @@ import {
     checkAllServersStatus,
     type ServerStatus,
 } from '@/lib/webrtc-service';
-import { getAllUsers, getUserDisplayName, type User } from '@/lib/users-api';
+import { getAllUsers, getUserDisplayName, updateUserAccess, type User } from '@/lib/users-api';
 import { getStoredUser, removeUser } from '@/lib/auth-api';
 import { useRouter } from 'next/navigation';
 import CallModal from '@/components/CallModal';
@@ -150,6 +150,21 @@ export default function Home() {
             console.error('Failed to check servers:', error);
         } finally {
             setCheckingServers(false);
+        }
+    };
+
+    // access 1 = Заблок. (blocked), access 0 = Доступ (has access)
+    const hasAccess = (u: User) => u.access === 0 || u.access === false;
+    const handleToggleAccess = async (user: User) => {
+        const newAccess = hasAccess(user) ? 1 : 0;
+        try {
+            await updateUserAccess(user.id, newAccess === 1);
+            setUsers((prev) =>
+                prev.map((u) => (u.id === user.id ? { ...u, access: newAccess } : u))
+            );
+        } catch (error) {
+            console.error('Failed to update access:', error);
+            alert('Не удалось обновить доступ');
         }
     };
 
@@ -881,6 +896,7 @@ export default function Home() {
                                 const isDisabled =
                                     !currentLoyaltyId ||
                                     isMe ||
+                                    !hasAccess(user) ||
                                     (!user.online && !user.hasVoipToken);
 
                                 return (
@@ -1072,6 +1088,37 @@ export default function Home() {
                                                 </div>
                                             </div>
                                         </div>
+                                        <label
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                cursor: 'pointer',
+                                                marginRight: 12,
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={hasAccess(user)}
+                                                onChange={() => handleToggleAccess(user)}
+                                                style={{
+                                                    width: 20,
+                                                    height: 20,
+                                                    accentColor: '#FE732E',
+                                                    cursor: 'pointer',
+                                                }}
+                                            />
+                                            <span
+                                                style={{
+                                                    fontSize: 12,
+                                                    color: hasAccess(user) ? '#22c55e' : '#ef4444',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                {hasAccess(user) ? 'Доступ' : 'Заблок.'}
+                                            </span>
+                                        </label>
                                         <button
                                             onClick={() => handleCallUser(user)}
                                             disabled={isDisabled}
