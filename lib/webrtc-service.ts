@@ -3,7 +3,7 @@ import io, { Socket } from 'socket.io-client';
 // Backend base URL – MUST be your Mac's LAN IP (not localhost) so devices can reach it.
 // This should match the backend URL from your React Native app.
 // const BASE_URL = 'https://server.totus.club';
-const BASE_URL = 'https://server.totus.club';
+const BASE_URL = 'https://voip.totus.club';
 
 // Call state tracking for UI
 export type CallState = 'idle' | 'calling' | 'ringing' | 'answered' | 'ended' | 'rejected';
