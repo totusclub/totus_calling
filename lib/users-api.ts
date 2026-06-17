@@ -1,7 +1,7 @@
 // API service for fetching users from database
+import {SERVER_BASE_URL} from './server';
 
-const BASE_URL = 'https://voip.totus.club';
-// const BASE_URL = 'https://server.totus.club';
+const BASE_URL = SERVER_BASE_URL;
 
 export interface User {
   id: number;
@@ -45,6 +45,24 @@ export async function getAllUsers(): Promise<User[]> {
     return data.users || [];
   } catch (error) {
     console.error('Error fetching users:', error);
+    throw error;
+  }
+}
+
+// Get user by database id
+export async function getUserById(userId: number): Promise<User | null> {
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/by-id/${userId}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to fetch user: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.user || null;
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
     throw error;
   }
 }

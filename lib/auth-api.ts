@@ -1,7 +1,7 @@
 // Authentication API service for web app
+import {SERVER_BASE_URL} from './server';
 
-// const BASE_URL = 'https://server.totus.club';
-const BASE_URL = 'https://voip.totus.club';
+const BASE_URL = SERVER_BASE_URL;
 
 export interface LoginCredentials {
   email: string;

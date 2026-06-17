@@ -15,6 +15,7 @@ import { getAllUsers, getUserDisplayName, updateUserAccess, type User } from '@/
 import { getStoredUser, removeUser } from '@/lib/auth-api';
 import { useRouter } from 'next/navigation';
 import CallModal from '@/components/CallModal';
+import AdminNav from '@/components/AdminNav';
 
 export default function Home() {
     const router = useRouter();
@@ -467,6 +468,8 @@ export default function Home() {
                     zIndex: 10,
                 }}
             >
+                <AdminNav />
+
                 {/* Header */}
                 <div
                     style={{
