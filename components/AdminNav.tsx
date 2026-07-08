@@ -7,6 +7,7 @@ const LINKS = [
     { href: '/users', label: 'Пользователи', icon: '👥' },
     { href: '/orders', label: 'Заказы', icon: '🧳' },
     { href: '/lt-orders', label: 'Level Travel', icon: '🌍' },
+    { href: '/pages', label: 'Страницы', icon: '📄' },
 ];
 
 export default function AdminNav() {

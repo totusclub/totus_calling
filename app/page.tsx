@@ -2,19 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import {
-    initWebRTCWithLoyaltyId,
     startOutgoingVoiceCallByLoyaltyId,
     getCurrentLoyaltyId,
     getActiveCallInfo,
-    setCallStateChangeCallback,
-    setCallActiveChangeCallback,
+    getCallState,
     checkAllServersStatus,
     type ServerStatus,
 } from '@/lib/webrtc-service';
 import { getAllUsers, getUserDisplayName, updateUserAccess, type User } from '@/lib/users-api';
 import { getStoredUser, removeUser } from '@/lib/auth-api';
 import { useRouter } from 'next/navigation';
-import CallModal from '@/components/CallModal';
 import AdminNav from '@/components/AdminNav';
 
 export default function Home() {
@@ -25,9 +22,7 @@ export default function Home() {
     const [loading, setLoading] = useState(false);
     const [callSeconds, setCallSeconds] = useState(0);
     const [isCallActive, setIsCallActive] = useState(false);
-    const [callModalVisible, setCallModalVisible] = useState(false);
     const [callState, setCallState] = useState<'idle' | 'calling' | 'ringing' | 'answered' | 'ended' | 'rejected'>('idle');
-    const [callerName, setCallerName] = useState<string | null>(null);
     const [serverStatuses, setServerStatuses] = useState<ServerStatus[]>([]);
     const [checkingServers, setCheckingServers] = useState(false);
     const [showServerStatus, setShowServerStatus] = useState(false);
@@ -54,15 +49,8 @@ export default function Home() {
             // Support both camelCase and snake_case for loyaltyId
             const loyaltyId = user.loyaltyId || (user as any).loyalty_id;
             if (loyaltyId) {
-                console.log('Initializing WebRTC with loyaltyId:', loyaltyId);
+                console.log('Using loyaltyId:', loyaltyId);
                 setCurrentLoyaltyId(loyaltyId);
-                try {
-                    initWebRTCWithLoyaltyId(loyaltyId);
-                    console.log('WebRTC initialized successfully');
-                } catch (e) {
-                    console.error('Failed to initialize WebRTC:', e);
-                    alert('Ошибка инициализации WebRTC: ' + (e instanceof Error ? e.message : String(e)));
-                }
             } else {
                 console.error('User object does not have loyaltyId:', user);
                 alert('Ошибка: у пользователя нет loyaltyId. Пожалуйста, войдите снова.');
@@ -71,21 +59,6 @@ export default function Home() {
             // Not logged in, redirect to login
             router.push('/login');
         }
-
-        // Set up call state callbacks
-        setCallStateChangeCallback((state, name) => {
-            console.log('📞 Call state changed:', state, 'caller:', name);
-            setCallState(state);
-            setCallerName(name);
-            // Show modal for any non-idle state (calling, ringing, answered, etc.)
-            const shouldShow = state !== 'idle';
-            setCallModalVisible(shouldShow);
-            console.log('📞 Modal visibility set to:', shouldShow, 'for state:', state);
-        });
-
-        setCallActiveChangeCallback((isActive, startedAt) => {
-            setIsCallActive(isActive);
-        });
 
         // Load users on mount
         loadUsers();
@@ -102,10 +75,12 @@ export default function Home() {
         }
     }, [currentLoyaltyId]);
 
-    // Timer for active calls
+    // Timer and call status for home page widget
     useEffect(() => {
         const interval = setInterval(() => {
             const info = getActiveCallInfo();
+            const state = getCallState();
+            setCallState(state.state);
             if (info.isActive && info.startedAt) {
                 setIsCallActive(true);
                 const diffSec = Math.floor((Date.now() - info.startedAt) / 1000);
@@ -117,16 +92,6 @@ export default function Home() {
         }, 1000);
         return () => clearInterval(interval);
     }, []);
-
-    // Auto-close modal after call ends
-    useEffect(() => {
-        if (callState === 'ended' || callState === 'rejected') {
-            const timer = setTimeout(() => {
-                setCallModalVisible(false);
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [callState]);
 
     const formatCallTime = (totalSeconds: number) => {
         const m = Math.floor(totalSeconds / 60);
@@ -1394,122 +1359,7 @@ export default function Home() {
                     )}
                 </div>
 
-                {/* Call Modal */}
-                {callModalVisible && (
-                    <CallModal
-                        visible={callModalVisible}
-                        onClose={() => {
-                            // Минимизировать модалку, не прерывая звонок
-                            setCallModalVisible(false);
-                        }}
-                    />
-                )}
             </div>
-
-            {/* Floating mini-call bar to restore modal */}
-            {callState !== 'idle' && !callModalVisible && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        right: 20,
-                        bottom: 20,
-                        zIndex: 9998,
-                    }}
-                >
-                    <button
-                        type="button"
-                        onClick={() => setCallModalVisible(true)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '14px 20px',
-                            borderRadius: 999,
-                            border: `2px solid ${
-                                callState === 'answered'
-                                    ? 'rgba(34,197,94,0.5)'
-                                    : callState === 'ringing'
-                                        ? 'rgba(34,197,94,0.5)'
-                                        : 'rgba(248,113,22,0.5)'
-                            }`,
-                            background:
-                                'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(2,6,23,0.97))',
-                            color: '#e5e7eb',
-                            fontSize: 14,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            boxShadow: `0 16px 40px ${
-                                callState === 'answered'
-                                    ? 'rgba(34,197,94,0.3)'
-                                    : callState === 'ringing'
-                                        ? 'rgba(34,197,94,0.3)'
-                                        : 'rgba(248,113,22,0.3)'
-                            }`,
-                            backdropFilter: 'blur(20px)',
-                            transition: 'all 0.3s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = `0 20px 50px ${
-                                callState === 'answered'
-                                    ? 'rgba(34,197,94,0.4)'
-                                    : callState === 'ringing'
-                                        ? 'rgba(34,197,94,0.4)'
-                                        : 'rgba(248,113,22,0.4)'
-                            }`;
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = `0 16px 40px ${
-                                callState === 'answered'
-                                    ? 'rgba(34,197,94,0.3)'
-                                    : callState === 'ringing'
-                                        ? 'rgba(34,197,94,0.3)'
-                                        : 'rgba(248,113,22,0.3)'
-                            }`;
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: '50%',
-                                backgroundColor:
-                                    callState === 'answered'
-                                        ? '#22c55e'
-                                        : callState === 'ringing'
-                                            ? '#22c55e'
-                                            : '#f97316',
-                                boxShadow: `0 0 12px ${
-                                    callState === 'answered'
-                                        ? 'rgba(34,197,94,0.8)'
-                                        : callState === 'ringing'
-                                            ? 'rgba(34,197,94,0.8)'
-                                            : 'rgba(248,113,22,0.8)'
-                                }`,
-                                animation: callState === 'ringing' ? 'pulse 2s infinite' : 'none',
-                            }}
-                        />
-                        <span style={{ whiteSpace: 'nowrap' }}>
-              {callerName || 'Звонок'}
-            </span>
-                        {isCallActive && (
-                            <span
-                                style={{
-                                    marginLeft: 4,
-                                    fontFamily: 'SF Mono, ui-monospace, Menlo, Monaco, Consolas',
-                                    fontSize: 13,
-                                    color: '#fbbf24',
-                                    fontWeight: 700,
-                                }}
-                            >
-                {formatCallTime(callSeconds)}
-              </span>
-                        )}
-                        <span style={{ fontSize: 18, marginLeft: 4 }}>📞</span>
-                    </button>
-                </div>
-            )}
 
         </div>
     );

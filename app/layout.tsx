@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import AuthGuard from '@/components/AuthGuard';
+import GlobalCallManager from '@/components/GlobalCallManager';
 import './globals.css'
 
 const inter = Inter({
@@ -21,7 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthGuard>{children}</AuthGuard>
+        <AuthGuard>
+          {children}
+          <GlobalCallManager />
+        </AuthGuard>
       </body>
     </html>
   )

@@ -3,3 +3,35 @@
     padding: 0;
     box-sizing: border-box;
 }
+
+input,
+textarea,
+select {
+    background-color: #020617;
+    color: #f9fafb;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+textarea {
+    background-color: #020617 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #6b7280;
+}
+
+select option {
+    background-color: #0f172a;
+    color: #f9fafb;
+}
+
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px #020617 inset !important;
+    box-shadow: 0 0 0 1000px #020617 inset !important;
+    -webkit-text-fill-color: #f9fafb !important;
+    caret-color: #f9fafb;
+}
