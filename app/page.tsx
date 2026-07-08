@@ -6,6 +6,7 @@ import {
     getCurrentLoyaltyId,
     getActiveCallInfo,
     getCallState,
+    initWebRTCWithLoyaltyId,
     checkAllServersStatus,
     type ServerStatus,
 } from '@/lib/webrtc-service';
