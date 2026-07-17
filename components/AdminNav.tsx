@@ -8,6 +8,8 @@ const LINKS = [
     { href: '/orders', label: 'Заказы', icon: '🧳' },
     { href: '/lt-orders', label: 'Level Travel', icon: '🌍' },
     { href: '/pages', label: 'Страницы', icon: '📄' },
+    { href: '/home-content', label: 'Главная', icon: '🏠' },
+    { href: '/callback-requests', label: 'Заявки на звонок', icon: '📱' },
 ];
 
 export default function AdminNav() {
