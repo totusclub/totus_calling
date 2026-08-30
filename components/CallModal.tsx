@@ -254,7 +254,7 @@ export default function CallModal({ visible, onClose }: CallModalProps) {
         </div>
 
         {/* Timer */}
-        {(isActive || isEnded) && (
+        {isActive && (
           <div
             style={{
               fontFamily: text.mono.fontFamily,
@@ -322,14 +322,14 @@ export default function CallModal({ visible, onClose }: CallModalProps) {
             <>
               <button
                 onClick={handleRejectCall}
-                style={circleButton(72, t.error, '#ffffff')}
+                style={circleButton(72, t.error, t.textOnAccent)}
                 title="Отклонить"
               >
                 <Icon name="phoneOff" size={28} />
               </button>
               <button
                 onClick={handleAnswerCall}
-                style={circleButton(72, t.success, '#ffffff')}
+                style={circleButton(72, t.success, t.textOnAccent)}
                 title="Ответить"
               >
                 <Icon name="phone" size={28} />
@@ -341,7 +341,7 @@ export default function CallModal({ visible, onClose }: CallModalProps) {
           {(isAnswered || isCalling) && (
             <button
               onClick={handleEndCall}
-              style={circleButton(72, t.error, '#ffffff')}
+              style={circleButton(72, t.error, t.textOnAccent)}
               title="Завершить звонок"
             >
               <Icon name="phoneOff" size={28} />

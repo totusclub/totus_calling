@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import {
     initWebRTCWithLoyaltyId,
     startOutgoingVoiceCallByLoyaltyId,
-    getCurrentLoyaltyId,
     getActiveCallInfo,
     setCallStateChangeCallback,
     setCallActiveChangeCallback,
@@ -19,9 +18,6 @@ import Icon from '@/components/Icon';
 import BrandLogo from '@/components/BrandLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { t, radius, text, layout, cardStyle, button, badge } from '@/lib/theme';
-
-/** Моноширинный стек для таймера и адресов серверов. */
-const MONO = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
 
 export default function Home() {
     const router = useRouter();
@@ -282,7 +278,6 @@ export default function Home() {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <ThemeToggle compact />
-                        <span style={badge('success')}>Агент онлайн</span>
                         <button type="button" onClick={handleLogout} style={button('secondary')}>
                             <Icon name="logout" size={18} />
                             Выйти
@@ -400,7 +395,7 @@ export default function Home() {
                         </div>
                         <div
                             style={{
-                                fontFamily: MONO,
+                                fontFamily: text.mono.fontFamily,
                                 fontSize: 32,
                                 lineHeight: '40px',
                                 fontWeight: 600,
@@ -715,7 +710,7 @@ export default function Home() {
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div
                                                 style={{
-                                                    fontFamily: MONO,
+                                                    fontFamily: text.mono.fontFamily,
                                                     fontSize: 13,
                                                     lineHeight: '18px',
                                                     color: t.textPrimary,
@@ -828,7 +823,7 @@ export default function Home() {
                         {isCallActive && (
                             <span
                                 style={{
-                                    fontFamily: MONO,
+                                    fontFamily: text.mono.fontFamily,
                                     fontSize: 13,
                                     fontWeight: 600,
                                     color: t.accent,
