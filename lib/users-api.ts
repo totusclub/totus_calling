@@ -1,7 +1,7 @@
 // API service for fetching users from database
+import {SERVER_BASE_URL} from './server';
 
-const BASE_URL = 'https://server.totus.club';
-// const BASE_URL = 'https://server.totus.club';
+const BASE_URL = SERVER_BASE_URL;
 
 export interface User {
   id: number;
@@ -83,4 +83,3 @@ export function getUserDisplayName(user: User): string {
   }
   return `User ${user.loyaltyId}`;
 }
-
