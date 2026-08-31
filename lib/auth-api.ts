@@ -1,7 +1,7 @@
 // Authentication API service for web app
+import {SERVER_BASE_URL} from './server';
 
-// const BASE_URL = 'https://server.totus.club';
-const BASE_URL = 'https://server.totus.club';
+const BASE_URL = SERVER_BASE_URL;
 
 export interface LoginCredentials {
   email: string;
@@ -76,4 +76,3 @@ export function isAuthenticated(): boolean {
   const user = getStoredUser();
   return user !== null && user.role === 'agent';
 }
-
