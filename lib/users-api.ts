@@ -1,5 +1,6 @@
 // API service for fetching users from database
 import {SERVER_BASE_URL} from './server';
+import { authFetch } from './http';
 
 const BASE_URL = SERVER_BASE_URL;
 
@@ -20,7 +21,7 @@ export interface User {
 // Update user access (1 or 0)
 export async function updateUserAccess(userId: number, access: boolean): Promise<void> {
   try {
-    const response = await fetch(`${BASE_URL}/api/users/${userId}/access`, {
+    const response = await authFetch(`${BASE_URL}/api/users/${userId}/access`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ access }),
@@ -37,7 +38,7 @@ export async function updateUserAccess(userId: number, access: boolean): Promise
 // Get all users from database
 export async function getAllUsers(): Promise<User[]> {
   try {
-    const response = await fetch(`${BASE_URL}/api/users`);
+    const response = await authFetch(`${BASE_URL}/api/users`);
     if (!response.ok) {
       throw new Error(`Failed to fetch users: ${response.status}`);
     }
@@ -52,7 +53,7 @@ export async function getAllUsers(): Promise<User[]> {
 // Get user by loyalty_id
 export async function getUserByLoyaltyId(loyaltyId: string): Promise<User | null> {
   try {
-    const response = await fetch(`${BASE_URL}/api/users/${loyaltyId}`);
+    const response = await authFetch(`${BASE_URL}/api/users/${loyaltyId}`);
     if (!response.ok) {
       if (response.status === 404) {
         return null;

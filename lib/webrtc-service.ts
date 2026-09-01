@@ -1,5 +1,6 @@
 import io, { Socket } from 'socket.io-client';
 import {SERVER_BASE_URL} from './server';
+import { authFetch, getAccessToken } from './http';
 
 const BASE_URL = SERVER_BASE_URL;
 
@@ -79,7 +80,11 @@ function ensureSocketConnected() {
   if (socket && socket.connected) {
     return;
   }
-  socket = io(BASE_URL, { transports: ['websocket'] });
+  socket = io(BASE_URL, {
+    transports: ['websocket'],
+    // agent-JWT в handshake (calling_api_v2 middleware/auth.js socketGate)
+    auth: { token: getAccessToken() || undefined },
+  });
 
   socket.on('connect', () => {
     // console.log('Socket connected', socket?.id);
@@ -412,7 +417,7 @@ async function registerDevice(deviceId: string, loyaltyId: string) {
     // Generate a fake voipToken for web (not used for push, but required by backend)
     const voipToken = `web-${deviceId}`;
     
-    await fetch(`${BASE_URL}/api/register-device`, {
+    await authFetch(`${BASE_URL}/api/register-device`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -670,7 +675,7 @@ export async function startOutgoingVoiceCallByLoyaltyId(targetLoyaltyId: string,
 
   // Send offer to backend using loyalty_id
   try {
-    const resp = await fetch(`${BASE_URL}/api/calls`, {
+    const resp = await authFetch(`${BASE_URL}/api/calls`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -733,7 +738,7 @@ export async function startOutgoingVoiceCall(targetDeviceId: string, displayName
 
   // Send offer to backend
   try {
-    const resp = await fetch(`${BASE_URL}/api/calls`, {
+    const resp = await authFetch(`${BASE_URL}/api/calls`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -862,7 +867,7 @@ async function waitForAnswerHTTP(callId: string): Promise<void> {
     }
 
     try {
-      const resp = await fetch(`${BASE_URL}/api/calls/${callId}`);
+      const resp = await authFetch(`${BASE_URL}/api/calls/${callId}`);
       if (!resp.ok) continue;
       const data = await resp.json();
       if (data.answer && data.answer.sdp && currentPc === pc) {
@@ -937,7 +942,7 @@ async function sendAnswerToBackend(callId: string, answer: RTCSessionDescription
     // Get call info to find caller device ID for socket forwarding
     let callerDeviceId: string | null = null;
     try {
-      const callResp = await fetch(`${BASE_URL}/api/calls/${callId}`);
+      const callResp = await authFetch(`${BASE_URL}/api/calls/${callId}`);
       if (callResp.ok) {
         const callData = await callResp.json();
         callerDeviceId = callData.fromDeviceId || null;
@@ -948,7 +953,7 @@ async function sendAnswerToBackend(callId: string, answer: RTCSessionDescription
     }
 
     // Send via HTTP to backend
-    const resp = await fetch(`${BASE_URL}/api/calls/${callId}/answer`, {
+    const resp = await authFetch(`${BASE_URL}/api/calls/${callId}/answer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1010,7 +1015,7 @@ async function sendIceCandidate(callId: string, from: 'caller' | 'callee', candi
     // Note: This might fail if call hasn't been created yet, which is OK
     let peerDeviceId: string | null = null;
     try {
-      const callResp = await fetch(`${BASE_URL}/api/calls/${callId}`);
+      const callResp = await authFetch(`${BASE_URL}/api/calls/${callId}`);
       if (callResp.ok) {
         const callData = await callResp.json();
         peerDeviceId = from === 'caller' ? callData.toDeviceId : callData.fromDeviceId;
@@ -1025,7 +1030,7 @@ async function sendIceCandidate(callId: string, from: 'caller' | 'callee', candi
     }
 
     // Send via HTTP (backend will forward via socket if peer is connected)
-    await fetch(`${BASE_URL}/api/calls/${callId}/candidate`, {
+    await authFetch(`${BASE_URL}/api/calls/${callId}/candidate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1073,7 +1078,7 @@ export async function answerCall(callUUID: string) {
     if (!pc || activeCallUUID !== callUUID) {
       console.warn('Cannot answer: peer connection not ready for call', callUUID, 'activeCallUUID:', activeCallUUID);
       // Try to fetch offer if peer connection doesn't exist
-      const resp = await fetch(`${BASE_URL}/api/calls/${callUUID}`);
+      const resp = await authFetch(`${BASE_URL}/api/calls/${callUUID}`);
       if (!resp.ok) {
         throw new Error(`Failed to fetch call offer: ${resp.status}`);
       }
@@ -1106,7 +1111,7 @@ export async function answerCall(callUUID: string) {
     // Ensure we have remote description set
     if (!pc.remoteDescription) {
       console.warn('No remote description set, fetching offer...');
-      const resp = await fetch(`${BASE_URL}/api/calls/${callUUID}`);
+      const resp = await authFetch(`${BASE_URL}/api/calls/${callUUID}`);
       if (resp.ok) {
         const data = await resp.json();
         if (data.offer && data.offer.sdp) {
@@ -1188,7 +1193,7 @@ export async function rejectCall(callUUID: string) {
   // Notify backend that call was rejected
   if (currentDeviceId) {
     try {
-      await fetch(`${BASE_URL}/api/calls/${callUUID}/end`, {
+      await authFetch(`${BASE_URL}/api/calls/${callUUID}/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1238,7 +1243,7 @@ function endVoiceCall() {
   }
 
   if (activeCallUUID && currentDeviceId) {
-    fetch(`${BASE_URL}/api/calls/${activeCallUUID}/end`, {
+    authFetch(`${BASE_URL}/api/calls/${activeCallUUID}/end`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
