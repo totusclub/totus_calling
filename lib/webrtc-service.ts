@@ -436,6 +436,45 @@ async function registerDevice(deviceId: string, loyaltyId: string) {
 }
 
 // Start WebRTC voice call
+// ---------------------------------------------------------------------------
+// ICE-серверы с бэкенда (Б.1, SECURITY_AUDIT_SECRETS_RU.md #25):
+// TURN-логин/пароль больше не зашиты в бандл — их выдаёт calling_api_v2
+// (GET /api/ice-servers, JWT). Ответ кэшируется до expiresAt минус запас.
+// Если запрос не удался — фолбэк STUN-only (звонок возможен без relay).
+// ---------------------------------------------------------------------------
+const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun1.totus.club:3478' },
+  { urls: 'stun:stun2.totus.club:3478' },
+];
+
+let cachedIceServers: RTCIceServer[] | null = null;
+let cachedIceExpiresAt = 0; // unix-секунды
+
+async function fetchIceServers(): Promise<RTCIceServer[]> {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedIceServers && now < cachedIceExpiresAt - 300) {
+    return cachedIceServers;
+  }
+  try {
+    const res = await authFetch(`${BASE_URL}/api/ice-servers`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.iceServers) && data.iceServers.length > 0) {
+        cachedIceServers = data.iceServers as RTCIceServer[];
+        cachedIceExpiresAt = Number(data.expiresAt) || now + 3600;
+        if (data.mode === 'stun-only') {
+          console.warn('[webrtc] backend вернул только STUN (TURN не настроен) — relay недоступен');
+        }
+        return cachedIceServers;
+      }
+    }
+    console.warn('[webrtc] /api/ice-servers ответил', res.status, '— фолбэк STUN-only');
+  } catch (e) {
+    console.warn('[webrtc] не удалось получить /api/ice-servers — фолбэк STUN-only', e);
+  }
+  return cachedIceServers || FALLBACK_ICE_SERVERS;
+}
+
 async function startVoiceCall(
   callUUID: string,
   remoteOffer: RTCSessionDescriptionInit | null,
@@ -462,92 +501,20 @@ async function startVoiceCall(
     throw new Error('Microphone access denied');
   }
 
-  // Create peer connection with comprehensive STUN/TURN servers for maximum stability
+  // Создание peer connection: ICE-серверы приходят с бэкенда (см. fetchIceServers выше)
+  const iceServers = await fetchIceServers();
 
-    const peer: any = new RTCPeerConnection({
-        iceServers: [
-            // STUN սերվերներ՝ ուղղակի կապի համար
-            { urls: "stun:stun1.totus.club:3478" },
-            { urls: "stun:stun2.totus.club:3478" },
+  const peer: any = new RTCPeerConnection({
+    iceServers,
 
-            // TURN սերվերներ՝ NAT/ֆայերվոլի դեպքում փոխանցման համար
-            {
-                urls: "turn:turn1.totus.club:3478?transport=udp",
-                username: "test",
-                credential: "TotusSecretKey2026",
-            },
-            {
-                urls: "turn:turn1.totus.club:3478?transport=tcp",
-                username: "test",
-                credential: "TotusSecretKey2026",
-            },
-            {
-                urls: "turns:turn1.totus.club:5349?transport=tcp",
-                username: "test",
-                credential: "TotusSecretKey2026",
-            },
-            {
-                urls: "turn:turn2.totus.club:3478?transport=udp",
-                username: "test",
-                credential: "TotusSecretKey2026",
-            },
-            {
-                urls: "turn:turn2.totus.club:3478?transport=tcp",
-                username: "test",
-                credential: "TotusSecretKey2026",
-            },
-            {
-                urls: "turns:turn2.totus.club:5349?transport=tcp",
-                username: "test",
-                credential: "TotusSecretKey2026",
-            },
-        ],
+    // Նախօրոք հավաքել ICE թեկնածուներ արագ կապի համար
+    iceCandidatePoolSize: 10,
 
-        // Նախօրոք հավաքել ICE թեկնածուներ արագ կապի համար
-        iceCandidatePoolSize: 10,
-
-        // Պրոֆեսիոնալ WebRTC պարամետրեր
-        iceTransportPolicy: "all",     // օգտագործել ինչպես ուղղակի (STUN), այնպես էլ ռելեյ (TURN)
-        bundlePolicy: "max-bundle",    // RTP/RTCP–ը նույն պորտով հավաքել՝ NAT–ի արդյունավետության համար
-        rtcpMuxPolicy: "require",      // պահանջել RTP/RTCP համակցումը՝ նույն պորտով
-    });
-
-
-
-    //   const peer = new RTCPeerConnection({
-  //   iceServers: [
-  //     // Public STUN servers (multiple for redundancy and reliability)
-  //     { urls: 'stun:stun.l.google.com:19302' },
-  //     { urls: 'stun:stun1.l.google.com:19302' },
-  //     { urls: 'stun:stun2.l.google.com:19302' },
-  //     { urls: 'stun:stun3.l.google.com:19302' },
-  //     { urls: 'stun:stun4.l.google.com:19302' },
-  //     { urls: 'stun:stun.stunprotocol.org:3478' },
-  //     { urls: 'stun:stun.voiparound.com' },
-  //     { urls: 'stun:stun.voipbuster.com' },
-  //     { urls: 'stun:stun.voipstunt.com' },
-  //     { urls: 'stun:stun.voxgratia.org' },
-  //     { urls: 'stun:stun.ekiga.net' },
-  //     { urls: 'stun:stun.ideasip.com' },
-  //     { urls: 'stun:stun.schlund.de' },
-  //     { urls: 'stun:stun.voipgate.com' },
-  //     { urls: ['stun:fr-turn3.xirsys.com'] },
-  //     // TURN servers (Xirsys - for NAT traversal and relay when STUN fails)
-  //     {
-  //       username: '3S4jyxcSetE19BA7RnBF1KQg4G7nhkwoKiIkfNDHe9fKhz-SaS3XT3E1J2ADtD2OAAAAAGjDJ9lIYXlrOTU=',
-  //       credential: '77c51804-8f48-11f0-9cf6-e25abca605ee',
-  //       urls: [
-  //         'turn:fr-turn3.xirsys.com:80?transport=udp',
-  //         'turn:fr-turn3.xirsys.com:3478?transport=udp',
-  //         'turn:fr-turn3.xirsys.com:80?transport=tcp',
-  //         'turn:fr-turn3.xirsys.com:3478?transport=tcp',
-  //         'turns:fr-turn3.xirsys.com:443?transport=tcp',
-  //         'turns:fr-turn3.xirsys.com:5349?transport=tcp',
-  //       ],
-  //     },
-  //   ],
-  //   iceCandidatePoolSize: 10, // Pre-gather more candidates for faster connection
-  // });
+    // Պրոֆեսիոնալ WebRTC պարամետրեր
+    iceTransportPolicy: 'all', // օգտագործել ինչպես ուղղակի (STUN), այնպես էլ ռելեյ (TURN)
+    bundlePolicy: 'max-bundle', // RTP/RTCP–ը նույն պորտով հավաքել՝ NAT–ի արդյունավետության համար
+    rtcpMuxPolicy: 'require', // պահանջել RTP/RTCP համակցումը՝ նույն պորտով
+  });
 
   pc = peer;
 
@@ -1340,45 +1307,10 @@ export type ServerStatus = {
   latency?: number;
 };
 
-// Get all configured ICE servers
+// Get all configured ICE servers (для страницы диагностики).
+// Креды не зашиты (Б.1): отдаём последний список с бэкенда или STUN-фолбэк.
 export function getIceServers(): RTCIceServer[] {
-  return [
-      // STUN սերվերներ՝ ուղղակի կապի համար
-      { urls: "stun:stun1.totus.club:3478" },
-      { urls: "stun:stun2.totus.club:3478" },
-
-      // TURN սերվերներ՝ NAT/ֆայերվոլի դեպքում փոխանցման համար
-      {
-          urls: "turn:turn1.totus.club:3478?transport=udp",
-          username: "test",
-          credential: "TotusSecretKey2026",
-      },
-      {
-          urls: "turn:turn1.totus.club:3478?transport=tcp",
-          username: "test",
-          credential: "TotusSecretKey2026",
-      },
-      {
-          urls: "turns:turn1.totus.club:5349?transport=tcp",
-          username: "test",
-          credential: "TotusSecretKey2026",
-      },
-      {
-          urls: "turn:turn2.totus.club:3478?transport=udp",
-          username: "test",
-          credential: "TotusSecretKey2026",
-      },
-      {
-          urls: "turn:turn2.totus.club:3478?transport=tcp",
-          username: "test",
-          credential: "TotusSecretKey2026",
-      },
-      {
-          urls: "turns:turn2.totus.club:5349?transport=tcp",
-          username: "test",
-          credential: "TotusSecretKey2026",
-      },
-  ];
+  return cachedIceServers || FALLBACK_ICE_SERVERS;
 }
 
 // Check server status
@@ -1467,4 +1399,3 @@ export async function checkAllServersStatus(): Promise<ServerStatus[]> {
   
   return allStatuses;
 }
-
