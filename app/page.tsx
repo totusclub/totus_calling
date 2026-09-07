@@ -5,18 +5,18 @@ import {
     initWebRTCWithLoyaltyId,
     startOutgoingVoiceCallByLoyaltyId,
     getActiveCallInfo,
+    getCallState,
     setCallStateChangeCallback,
     setCallActiveChangeCallback,
     checkAllServersStatus,
     type ServerStatus,
 } from '@/lib/webrtc-service';
 import { getAllUsers, getUserDisplayName, updateUserAccess, type User } from '@/lib/users-api';
-import { getStoredUser, removeUser } from '@/lib/auth-api';
+import { getStoredUser } from '@/lib/auth-api';
 import { useRouter } from 'next/navigation';
 import CallModal from '@/components/CallModal';
 import Icon from '@/components/Icon';
-import BrandLogo from '@/components/BrandLogo';
-import ThemeToggle from '@/components/ThemeToggle';
+import AppHeader from '@/components/AppHeader';
 import { t, radius, text, layout, cardStyle, button, badge } from '@/lib/theme';
 
 export default function Home() {
@@ -89,6 +89,15 @@ export default function Home() {
             setIsCallActive(isActive);
         });
 
+        // Звонок мог быть начат на другой странице (чат поддержки → «Позвонить»):
+        // подхватываем текущее состояние, чтобы сразу показать карточку звонка.
+        const current = getCallState();
+        if (current.state !== 'idle') {
+            setCallState(current.state);
+            setCallerName(current.callerName);
+            setCallModalVisible(true);
+        }
+
         // Load users on mount
         loadUsers();
 
@@ -134,13 +143,6 @@ export default function Home() {
         const m = Math.floor(totalSeconds / 60);
         const s = totalSeconds % 60;
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
-
-    const handleLogout = () => {
-        if (confirm('Вы уверены, что хотите выйти?')) {
-            removeUser();
-            router.push('/login');
-        }
     };
 
     const checkServers = async () => {
@@ -255,35 +257,8 @@ export default function Home() {
                     gap: 24,
                 }}
             >
-                {/* Шапка */}
-                <div
-                    style={{
-                        ...cardStyle,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 16,
-                        flexWrap: 'wrap',
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <BrandLogo height={28} />
-                        <div>
-                            <div style={text.sectionTitle}>Totus Web Calling</div>
-                            <div style={text.caption}>
-                                Панель звонков для агентов в реальном времени
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <ThemeToggle compact />
-                        <button type="button" onClick={handleLogout} style={button('secondary')}>
-                            <Icon name="logout" size={18} />
-                            Выйти
-                        </button>
-                    </div>
-                </div>
+                {/* Шапка: логотип, вкладки «Звонки / Чат поддержки», тема, выход */}
+                <AppHeader />
 
                 {/* Карточка агента + статус звонка */}
                 <div
