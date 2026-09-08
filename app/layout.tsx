@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Golos_Text } from 'next/font/google'
 import AuthGuard from '@/components/AuthGuard';
+import SupportChatProvider from '@/components/SupportChatProvider';
 import ThemeProvider, { themeBootstrapScript } from '@/components/ThemeProvider';
 import './globals.css'
 
@@ -28,7 +29,10 @@ export default function RootLayout({
       </head>
       <body className={golos.className}>
         <ThemeProvider>
-          <AuthGuard>{children}</AuthGuard>
+          <AuthGuard>
+            {/* Счётчик непрочитанного и сокет чата поддержки; на /login ничего не делает */}
+            <SupportChatProvider>{children}</SupportChatProvider>
+          </AuthGuard>
         </ThemeProvider>
       </body>
     </html>
