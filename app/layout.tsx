@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Golos_Text } from 'next/font/google'
 import AuthGuard from '@/components/AuthGuard';
 import SupportChatProvider from '@/components/SupportChatProvider';
+import IncomingCallRingtone from '@/components/IncomingCallRingtone';
 import ThemeProvider, { themeBootstrapScript } from '@/components/ThemeProvider';
 import './globals.css'
 
@@ -32,6 +33,8 @@ export default function RootLayout({
           <AuthGuard>
             {/* Счётчик непрочитанного и сокет чата поддержки; на /login ничего не делает */}
             <SupportChatProvider>{children}</SupportChatProvider>
+            {/* Звук входящего звонка и мигание вкладки — на любой странице, пока звонят */}
+            <IncomingCallRingtone />
           </AuthGuard>
         </ThemeProvider>
       </body>
